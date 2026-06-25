@@ -5,9 +5,9 @@ export const config: PlasmoCSConfig = {
 }
 
 async function captureFullPage() {
-  const scrollHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
   const viewportHeight = window.innerHeight;
   const viewportWidth = window.innerWidth;
+  const scrollHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, viewportHeight);
   const originalX = window.scrollX;
   const originalY = window.scrollY;
 
@@ -73,18 +73,23 @@ async function captureFullPage() {
 
   while (currentY < scrollHeight) {
     window.scrollTo(0, currentY);
-    await new Promise((resolve) => setTimeout(resolve, 400)); // Increased delay to avoid rate limit
+    await new Promise((resolve) => setTimeout(resolve, 400)); // Delay to let scrolling settle
+
+    const actualY = window.scrollY;
+
+    // If we've already captured this scroll position (e.g. hit the bottom cap), we are done.
+    if (captures.some(c => c.y === actualY)) {
+      break;
+    }
 
     try {
-      const dataUrl = await captureWithRetry(currentY);
+      const dataUrl = await captureWithRetry(actualY);
       captures.push({
-        y: currentY,
+        y: actualY,
         dataUrl
       });
     } catch (e) {
       console.error(e);
-      // Even if one fails completely, we shouldn't just skip without knowing.
-      // But we will continue to try and capture the rest.
     }
 
     // Hide fixed elements after the first screenshot so they don't repeat
@@ -93,26 +98,6 @@ async function captureFullPage() {
         item.el.style.transition = 'none';
         item.el.style.visibility = 'hidden';
       });
-    }
-
-    if (currentY + viewportHeight >= scrollHeight) {
-      // If we've reached the bottom, check if there was a gap
-      const bottomY = scrollHeight - viewportHeight;
-      if (bottomY > currentY) {
-        window.scrollTo(0, bottomY);
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        
-        try {
-          const finalDataUrl = await captureWithRetry(bottomY);
-          captures.push({
-            y: bottomY,
-            dataUrl: finalDataUrl
-          });
-        } catch (e) {
-          console.error(e);
-        }
-      }
-      break;
     }
 
     currentY += viewportHeight;

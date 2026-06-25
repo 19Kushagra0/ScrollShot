@@ -59,7 +59,7 @@ export default function ResultTab() {
         const canvas = document.createElement("canvas")
         const dpr = data.devicePixelRatio || 1
         canvas.width = data.viewportWidth * dpr
-        canvas.height = data.scrollHeight * dpr
+        canvas.height = Math.max(data.scrollHeight, data.viewportHeight) * dpr
 
         const ctx = canvas.getContext("2d")
         if (!ctx) throw new Error("Could not get canvas context")
@@ -149,7 +149,7 @@ export default function ResultTab() {
               paddingLeft: 12,
               letterSpacing: "0.02em"
             }}>
-              {data.viewportWidth} × {data.scrollHeight} px — {data.captures.length} slices
+              {data.viewportWidth} × {Math.max(data.scrollHeight, data.viewportHeight)} px — {data.captures.length} slices
             </span>
           )}
         </div>
